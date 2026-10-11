@@ -378,14 +378,14 @@ def _validate_policy_text(text):
         return data, None
 
 
-def policy_set(s):
-    text = sys.stdin.read()
+def _install_policy(text, s):
+    """Shared install pipeline: validate, dry-run, atomically install,
+    restart, health-probe. Used by policy-set and policy-reset."""
     data, err = _validate_policy_text(text)
     if err:
         fail(f"invalid policy: {err}")
 
     path = policy_path(s)
-    uid = pwd.getpwnam(app).pw_uid
 
     # Atomic install: write temp file in the same dir, validate with a live
     # anubis instance on a scratch port, then rename + restart.
@@ -424,6 +424,23 @@ def policy_set(s):
         time.sleep(0.5)
     else:
         fail("anubis did not become healthy after policy change")
+    return data
+
+
+def policy_set(s):
+    text = sys.stdin.read()
+    _install_policy(text, s)
+    print(json.dumps({"ok": True}))
+
+
+def policy_reset(s):
+    # The pristine package default lives in the app registry
+    # (/etc/yunohost/apps/<app>/conf/policy.yaml) and is refreshed by every
+    # upgrade, so "default" always means "what this package ships".
+    default = load_template("policy.yaml")
+    if not default:
+        fail("package default policy not found in the app registry")
+    _install_policy(default, s)
     print(json.dumps({"ok": True}))
 
 
@@ -437,6 +454,7 @@ def main():
     sub.add_parser("render")
     sub.add_parser("policy-get")
     sub.add_parser("policy-set")
+    sub.add_parser("policy-reset")
     sub.add_parser("remove-all")
     args = p.parse_args()
 
@@ -479,6 +497,10 @@ def main():
 
         if args.mode == "policy-set":
             policy_set(s)
+            return
+
+        if args.mode == "policy-reset":
+            policy_reset(s)
             return
 
         if args.mode == "remove-all":

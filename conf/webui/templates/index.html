@@ -7,40 +7,61 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='anubis.png') }}">
 <style>
   :root { color-scheme: light dark; }
-  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+  body { font-family: system-ui, sans-serif; max-width: 880px; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
   h1 { font-size: 1.5rem; display: flex; align-items: center; gap: .5rem; }
   h1 img { width: 2rem; height: 2rem; }
+  h2 { font-size: 1.1rem; margin: 1.6rem 0 .4rem; }
   .card { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 1rem 1.25rem; margin: 1rem 0; }
   table { border-collapse: collapse; width: 100%; }
   th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid rgba(128,128,128,.25); }
   th { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
-  .badge { font-size: .75rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid currentColor; }
+  .badge { font-size: .75rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
   .on { color: #1a7f37; } .off { color: #888; } .warn { color: #b35900; }
+  .act { font-size: .75rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; font-weight: 600; }
+  .a-ALLOW { color: #1a7f37; } .a-DENY { color: #c00; } .a-CHALLENGE { color: #4a7ebb; } .a-WEIGH { color: #b35900; }
   button { font: inherit; padding: .5rem 1.2rem; border-radius: 8px; border: 1px solid #888; background: #4a7ebb; color: #fff; cursor: pointer; }
   button:disabled { opacity: .5; cursor: wait; }
+  button.secondary { background: transparent; color: inherit; }
+  button.danger { background: #a33; }
   input[type=number] { width: 4.5rem; font: inherit; padding: .25rem .4rem; }
   #msg { margin: .75rem 0; padding: .6rem .9rem; border-radius: 8px; display: none; }
   #msg.ok { display: block; background: rgba(26,127,55,.12); border: 1px solid #1a7f37; }
   #msg.err { display: block; background: rgba(200,0,0,.12); border: 1px solid #c00; }
   .note { opacity: .75; font-size: .9rem; }
   .selfrow { opacity: .65; }
+  .rule { display: flex; gap: .75rem; align-items: baseline; padding: .5rem 0; border-bottom: 1px solid rgba(128,128,128,.2); flex-wrap: wrap; }
+  .rule:last-child { border-bottom: 0; }
+  .rule .grow { flex: 1 1 14rem; }
+  .rule .rm { color: #c00; background: none; border: 0; padding: .1rem .4rem; font-size: 1rem; cursor: pointer; }
+  .chip { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid rgba(128,128,128,.45); border-radius: 999px; padding: .3rem .75rem; margin: .25rem .25rem .25rem 0; cursor: pointer; user-select: none; }
+  .chip input { accent-color: #4a7ebb; }
+  .chip small { opacity: .7; }
+  #newrule { display: none; margin-top: .75rem; }
+  #newrule label { display: block; margin: .4rem 0; font-size: .9rem; }
+  #newrule input, #newrule select { font: inherit; padding: .3rem .45rem; border-radius: 6px; border: 1px solid rgba(128,128,128,.5); background: transparent; color: inherit; }
+  #newrule input[type=text] { width: 100%; box-sizing: border-box; }
+  details { margin: .8rem 0; }
+  summary { cursor: pointer; }
+  textarea { width: 100%; min-height: 22rem; font: 0.85rem/1.5 ui-monospace, Menlo, Consolas, monospace; padding: .75rem; border-radius: 8px; border: 1px solid rgba(128,128,128,.5); background: transparent; color: inherit; tab-size: 2; box-sizing: border-box; }
+  .actions { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin: .75rem 0; }
+  code { background: rgba(128,128,128,.15); padding: .05rem .3rem; border-radius: 4px; }
 </style>
 </head>
 <body>
 <h1><img src="{{ url_for('static', filename='anubis.png') }}" alt="Anubis logo"> Anubis bot shield</h1>
 <p class="note">Logged in as <b>{{ user }}</b>. Tick the domains that should show a
 proof-of-work challenge to visitors. Changes apply to nginx immediately; the
-YunoHost portal, ACME and this page are never challenged.
-<a href="/policy">Edit bot policies &rarr;</a></p>
+YunoHost portal, ACME and this page are never challenged.</p>
 
 {% if error %}
-<div class="msg err" id="msg" style="display:block">Could not read current state: {{ error }}</div>
+<div id="msg" class="err" style="display:block">Could not read current state: {{ error }}</div>
 {% endif %}
 
 {% if data %}
 <div id="msg"></div>
 
 <div class="card">
+  <h2 style="margin-top:0">Protected domains</h2>
   <table id="domains">
     <thead><tr><th>Protect</th><th>Domain</th><th>State</th></tr></thead>
     <tbody>
@@ -63,24 +84,116 @@ YunoHost portal, ACME and this page are never challenged.
     {% endfor %}
     </tbody>
   </table>
+  <p class="actions">
+    <button id="apply" onclick="apply()">Apply</button>
+    <span class="note">Anubis: <b>{{ "running" if data.anubis_running else "NOT RUNNING" }}</b></span>
+  </p>
 </div>
 
 <div class="card">
+  <h2 style="margin-top:0">How strict should the challenge be?</h2>
   <label>Challenge difficulty (0&ndash;8):
     <input type="number" id="difficulty" min="0" max="8" value="{{ data.difficulty }}">
   </label>
   <span class="note">&mdash; 4 is the default; higher = slower for bots <i>and</i> humans.</span>
-  <p>
-    <button id="apply" onclick="apply()">Apply</button>
-    <span class="note" id="status">Anubis: <b>{{ "running" if data.anubis_running else "NOT RUNNING" }}</b>
-      &middot; metrics/health: 127.0.0.1:{{ app_port }} via systemd</span>
-  </p>
+  <p class="note">Difficulty is saved together with the domain list above (click <b>Apply</b>).</p>
 </div>
 
+{% if rules %}
+<div class="card">
+  <h2 style="margin-top:0">Bot rules</h2>
+  <p class="note">Decide what happens to different kinds of visitors on your protected
+  domains: <span class="act a-ALLOW">ALLOW</span> lets them straight through,
+  <span class="act a-DENY">DENY</span> blocks them,
+  <span class="act a-CHALLENGE">CHALLENGE</span> shows them the proof-of-work test,
+  <span class="act a-WEIGH">WEIGH</span> makes the test harder for them.</p>
+
+  <div id="rules">
+  {% for r in rules.rules %}
+    {% if r.kind == 'pack' %}
+    <div class="rule" data-kind="pack" data-import="{{ r.import }}">
+      <span class="badge">rule pack</span>
+      <span class="grow"><b>{{ r.label }}</b><br><span class="note">{{ r.summary }}</span></span>
+      <button class="rm" title="Remove this pack" onclick="rmRule(this)">&#215;</button>
+    </div>
+    {% else %}
+    <div class="rule" data-kind="rule">
+      <span class="act a-{{ r.action }}">{{ r.action }}</span>
+      <span class="grow"><b>{{ r.name }}</b><br><span class="note">{{ r.summary }}</span></span>
+      <button class="rm" title="Remove this rule" onclick="rmRule(this)">&#215;</button>
+    </div>
+    {% endif %}
+  {% endfor %}
+  </div>
+
+  <div class="actions" style="margin-top:.75rem">
+    <button class="secondary" onclick="toggleNew()">&#65291; Add my own rule</button>
+    <button id="saveRules" onclick="saveRules()">Save rules</button>
+    <button class="danger" onclick="resetPolicy(this)" title="Discard every rule change and restore the rules this app shipped with">Restore defaults</button>
+  </div>
+
+  <div id="newrule">
+    <label>Name <span class="note">(lower-case, e.g. <code>deny-gptbot</code>)</span>
+      <input type="text" id="nr-name" placeholder="deny-gptbot"></label>
+    <label>Action
+      <select id="nr-action">
+        <option value="DENY">Block them</option>
+        <option value="CHALLENGE">Show them the challenge</option>
+        <option value="ALLOW">Let them through</option>
+        <option value="WEIGH">Make the challenge harder for them</option>
+      </select></label>
+    <label>Match by
+      <select id="nr-matcher">
+        {% for m in rules.matchers %}
+        <option value="{{ m.value }}">{{ m.label }}</option>
+        {% endfor %}
+      </select></label>
+    <label>Value <span class="note">(text to match, or IP/range list like <code>1.2.3.4, 10.0.0.0/8</code>)</span>
+      <input type="text" id="nr-value" placeholder="GPTBot"></label>
+    <label>Extra difficulty for WEIGH <span class="note">(only used when action is WEIGH)</span>
+      <input type="number" id="nr-weight" value="10"></label>
+    <p><button onclick="addRule()">Add rule</button>
+       <button class="secondary" onclick="toggleNew()">Cancel</button></p>
+  </div>
+
+  <p class="note">Ready-made rule packs from the Anubis project cover common cases
+  (bad bots, AI crawlers, search engines). Tick the ones you want:</p>
+  <div id="packs">
+  {% for p in rules.packs %}
+    <label class="chip"><input type="checkbox" value="{{ p.value }}"
+      {{ 'checked' if (rules.rules | selectattr('import', 'equalto', p.value) | list | length) > 0 }}>
+      <span><b>{{ p.label }}</b><br><small>{{ p.effect }}</small></span></label>
+  {% endfor %}
+  </div>
+
+  <details>
+    <summary class="note">Advanced: edit the full policy file (YAML)</summary>
+    <p class="note">Everything Anubis supports, in raw form. Your changes in the
+    simple editor above will overwrite the <code>bots:</code> section here; other
+    settings (status codes, storage, logging&hellip;) are preserved.
+    <a href="https://anubis.techaro.lol/docs/admin/policies/" target="_blank" rel="noopener">Full documentation &rarr;</a></p>
+    <textarea id="policy" spellcheck="false"></textarea>
+    <p class="actions">
+      <button onclick="saveYaml()">Save YAML</button>
+      <button class="secondary" onclick="loadYaml()">Reload from server</button>
+    </p>
+  </details>
+</div>
+{% endif %}
+{% endif %}
+
+<p class="note">Powered by <a href="https://github.com/TecharoHQ/anubis">Anubis</a>
+packaged natively for YunoHost.</p>
+
 <script>
+const msg = document.getElementById('msg');
+function flash(cls, text) {
+  msg.className = cls; msg.textContent = text; msg.style.display = 'block';
+  if (cls === 'ok') setTimeout(() => { msg.style.display = 'none'; }, 6000);
+}
+
 async function apply() {
   const btn = document.getElementById('apply');
-  const msg = document.getElementById('msg');
   const domains = [...document.querySelectorAll('.dom:checked')].map(i => i.value);
   const difficulty = parseInt(document.getElementById('difficulty').value, 10);
   btn.disabled = true; msg.className = ''; msg.style.display = 'none';
@@ -92,24 +205,111 @@ async function apply() {
     });
     const j = await r.json();
     if (r.ok) {
-      msg.className = 'ok'; msg.textContent =
-        'Saved. Protected: ' + (j.protected.length ? j.protected.join(', ') : '(none)') + '. nginx reloaded.';
+      flash('ok', 'Saved. Protected: ' + (j.protected.length ? j.protected.join(', ') : '(none)') + '. nginx reloaded.');
       document.querySelectorAll('.dom').forEach(i =>
         i.closest('tr').querySelector('.badge').outerHTML =
           i.checked ? '<span class="badge on">protected</span>' : '<span class="badge off">open</span>');
     } else {
-      msg.className = 'err'; msg.textContent = 'Error: ' + (j.error || JSON.stringify(j));
+      flash('err', 'Error: ' + (j.error || JSON.stringify(j)));
     }
-  } catch (e) {
-    msg.className = 'err'; msg.textContent = 'Request failed: ' + e;
-  }
-  msg.style.display = 'block';
+  } catch (e) { flash('err', 'Request failed: ' + e); }
   btn.disabled = false;
 }
-</script>
-{% endif %}
 
-<p class="note">Powered by <a href="https://github.com/TecharoHQ/anubis">Anubis</a>
-in nginx <code>auth_request</code> mode &middot; packaged natively for YunoHost.</p>
+function collectRules() {
+  const out = [];
+  document.querySelectorAll('#rules .rule').forEach(el => {
+    if (el.dataset.kind === 'pack') out.push({kind: 'pack', import: el.dataset.import});
+    else out.push({
+      kind: 'rule', name: el.dataset.name, action: el.dataset.action,
+      matcher_type: el.dataset.mtype, matcher_value: el.dataset.mval,
+      weight_adjust: el.dataset.wadj
+    });
+  });
+  document.querySelectorAll('#packs input:checked').forEach(cb => {
+    if (!out.some(r => r.kind === 'pack' && r.import === cb.value))
+      out.push({kind: 'pack', import: cb.value});
+  });
+  return out;
+}
+
+async function saveRules() {
+  const btn = document.getElementById('saveRules');
+  btn.disabled = true;
+  try {
+    const r = await fetch('api/policy', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({rules: collectRules()})
+    });
+    const j = await r.json();
+    if (r.ok) flash('ok', 'Rules saved and applied. Bad bots are being stopped with the new rules.');
+    else flash('err', 'Could not save: ' + (j.error || JSON.stringify(j)));
+  } catch (e) { flash('err', 'Request failed: ' + e); }
+  btn.disabled = false;
+}
+
+async function resetPolicy(btn) {
+  if (!confirm('Restore the default bot rules?\\n\\nThis discards ALL rule changes (packs and custom rules) and puts back the rules this app shipped with. Domains and difficulty are kept.')) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('api/policy/default', {method: 'POST'});
+    const j = await r.json();
+    if (r.ok) { flash('ok', 'Default rules restored. Reloading the page…'); setTimeout(() => location.reload(), 900); }
+    else flash('err', 'Could not restore: ' + (j.error || JSON.stringify(j)));
+  } catch (e) { flash('err', 'Request failed: ' + e); }
+  btn.disabled = false;
+}
+
+function rmRule(btn) { btn.closest('.rule').remove(); }
+
+function toggleNew() {
+  const d = document.getElementById('newrule');
+  d.style.display = d.style.display === 'block' ? 'none' : 'block';
+}
+
+function addRule() {
+  const name = document.getElementById('nr-name').value.trim();
+  const action = document.getElementById('nr-action').value;
+  const mtype = document.getElementById('nr-matcher').value;
+  const mval = document.getElementById('nr-value').value.trim();
+  const wadj = document.getElementById('nr-weight').value || 10;
+  if (!name) { alert('Give the rule a name, e.g. deny-gptbot'); return; }
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) { alert('Rule names: lower-case letters, numbers and dashes only.'); return; }
+  if (!mval) { alert('Fill in what the rule should match.'); return; }
+  const div = document.createElement('div');
+  div.className = 'rule';
+  div.dataset.kind = 'rule'; div.dataset.name = name; div.dataset.action = action;
+  div.dataset.mtype = mtype; div.dataset.mval = mval; div.dataset.wadj = wadj;
+  const actLabel = {DENY: 'Block', CHALLENGE: 'Challenge', ALLOW: 'Allow', WEIGH: 'Weigh'}[action];
+  const matLabel = {user_agent_regex: 'browser identity', path_regex: 'URL', headers_regex: 'headers', remote_addresses: 'IP address'}[mtype];
+  div.innerHTML = '<span class="act a-' + action + '">' + action + '</span>' +
+    '<span class="grow"><b>' + name + '</b><br><span class="note">' + actLabel + ' visitors whose ' + matLabel + ' matches ' + mval + '</span></span>' +
+    '<button class="rm" title="Remove this rule" onclick="rmRule(this)">&#215;</button>';
+  document.getElementById('rules').appendChild(div);
+  document.getElementById('nr-name').value = ''; document.getElementById('nr-value').value = '';
+  toggleNew();
+}
+
+async function loadYaml() {
+  const r = await fetch('api/policy');
+  const j = await r.json();
+  if (r.ok) document.getElementById('policy').value = j.policy || '';
+  else flash('err', 'Could not load: ' + (j.error || ''));
+}
+document.querySelector('details') && (document.getElementById('policy').value = '', loadYaml());
+
+async function saveYaml() {
+  const ta = document.getElementById('policy');
+  try {
+    const r = await fetch('api/policy', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({policy: ta.value})
+    });
+    const j = await r.json();
+    if (r.ok) flash('ok', 'Policy saved and applied.');
+    else flash('err', 'Could not save: ' + (j.error || JSON.stringify(j)));
+  } catch (e) { flash('err', 'Request failed: ' + e); }
+}
+</script>
 </body>
 </html>
