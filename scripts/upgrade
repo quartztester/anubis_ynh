@@ -41,6 +41,7 @@ mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
 install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/policy.html" "$install_dir/webui/templates/policy.html"
 install -m 0644 "$YNH_APP_BASEDIR/conf/domain-fragment.conf" "$install_dir/domain-fragment.conf"
 install -m 0644 "$YNH_APP_BASEDIR/conf/gate.lua" "$install_dir/gate.lua"
 install -m 0644 "$YNH_APP_BASEDIR/conf/policy.yaml" "$install_dir/policy.yaml"
@@ -61,6 +62,8 @@ $app ALL=(root) NOPASSWD: $APPLY_BIN status
 $app ALL=(root) NOPASSWD: $APPLY_BIN set --domains *
 $app ALL=(root) NOPASSWD: $APPLY_BIN set --domains * --difficulty *
 $app ALL=(root) NOPASSWD: $APPLY_BIN render
+$app ALL=(root) NOPASSWD: $APPLY_BIN policy-get
+$app ALL=(root) NOPASSWD: $APPLY_BIN policy-set
 EOF
 	chmod 0440 "$SUDOERS_FILE"
 	visudo -cf "$SUDOERS_FILE" || ynh_die "Invalid sudoers syntax"

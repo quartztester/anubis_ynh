@@ -30,7 +30,8 @@
 <h1><img src="{{ url_for('static', filename='anubis.png') }}" alt="Anubis logo"> Anubis bot shield</h1>
 <p class="note">Logged in as <b>{{ user }}</b>. Tick the domains that should show a
 proof-of-work challenge to visitors. Changes apply to nginx immediately; the
-YunoHost portal, ACME and this page are never challenged.</p>
+YunoHost portal, ACME and this page are never challenged.
+<a href="/policy">Edit bot policies &rarr;</a></p>
 
 {% if error %}
 <div class="msg err" id="msg" style="display:block">Could not read current state: {{ error }}</div>

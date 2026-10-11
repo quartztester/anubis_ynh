@@ -107,6 +107,38 @@ def create_app():
         ok, data = run_apply(*args)
         return (jsonify(data), 200) if ok else (jsonify(data), 400)
 
+    @app.route("/policy")
+    def policy_page():
+        ok, data = run_apply("policy-get")
+        policy = data.get("policy", "") if ok else ""
+        err = None if ok else data.get("error", "unknown error")
+        return render_template("policy.html", policy=policy, error=err,
+                               user=current_user())
+
+    @app.route("/api/policy", methods=["GET"])
+    def api_policy_get():
+        ok, data = run_apply("policy-get")
+        return (jsonify(data), 200) if ok else (jsonify(data), 500)
+
+    @app.route("/api/policy", methods=["POST"])
+    def api_policy_set():
+        body = request.get_json(force=True, silent=True) or {}
+        policy = body.get("policy")
+        if not isinstance(policy, str) or not policy.strip():
+            return jsonify({"error": "policy must be a non-empty YAML string"}), 400
+        proc = subprocess.run(
+            ["sudo", "-n", APPLY_BIN, "policy-set"],
+            input=policy, capture_output=True, text=True, timeout=180)
+        out = (proc.stdout or "").strip()
+        try:
+            data = json.loads(out) if out else {}
+        except json.JSONDecodeError:
+            data = {"raw": out}
+        if proc.returncode != 0:
+            data.setdefault("error", (proc.stderr or out or "helper failed").strip()[-400:])
+            return jsonify(data), 400
+        return jsonify(data), 200
+
     @app.template_filter("yesno")
     def yesno(v):
         return "yes" if v else "no"

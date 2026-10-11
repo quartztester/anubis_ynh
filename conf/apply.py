@@ -12,6 +12,11 @@ Modes:
         -> validate domains, store settings, regenerate, nginx -t, reload
     anubis-ynh-apply render
         -> regenerate everything from current settings (no setting change)
+    anubis-ynh-apply policy-get
+        -> JSON: current policy.yaml content (raw text)
+    anubis-ynh-apply policy-set
+        -> reads policy YAML on stdin, validates (YAML + rule schema +
+           Anubis accepting it), atomically installs, restarts anubis
 """
 
 import argparse
@@ -21,6 +26,7 @@ import pwd
 import re
 import subprocess
 import sys
+import tempfile
 
 APP_DEFAULT = "anubis"
 CONF_D = "/etc/nginx/conf.d"
@@ -220,14 +226,217 @@ def status(s):
     }))
 
 
+# ---------------------------------------------------------------- policy
+
+
+# Key lists transcribed from upstream lib/config/config.go (BotConfig,
+# fileConfig, ChallengeRules, Weight, Threshold) so the GUI rejects what
+# anubis rejects and accepts what anubis accepts.
+POLICY_KEYS = ("status_codes", "bots", "import", "metrics", "impressum",
+               "store", "logging", "honeypot", "thresholds", "geoip",
+               "openGraph", "dnsbl", "dns_ttl")
+BOT_KEYS = ("name", "action", "user_agent_regex", "path_regex",
+            "headers_regex", "expression", "challenge", "weight",
+            "remote_addresses", "remote_addresses_url", "geoip", "asns",
+            "import")
+ACTIONS = ("ALLOW", "DENY", "CHALLENGE", "WEIGH", "DEBUG_BENCHMARK")
+CHALLENGE_KEYS = ("difficulty", "algorithm")
+CHALLENGE_ALGOS = ("fast", "slow", "metarefresh")
+
+
+def policy_path(s):
+    return os.path.join(s["install_dir"], "policy.yaml")
+
+
+def policy_get(s):
+    path = policy_path(s)
+    try:
+        with open(path) as f:
+            content = f.read()
+    except FileNotFoundError:
+        content = ""
+    print(json.dumps({"policy": content}))
+
+
+def _validate_bot(bot, idx):
+    """Validate one bot rule from the policies doc; returns error or None."""
+    if not isinstance(bot, dict):
+        return f"rule #{idx}: must be a mapping"
+    if "import" in bot:
+        # upstream ships nameless import snippets (e.g. (data)/bots/*.yaml);
+        # anubis accepts them, so only require the import value to be a string
+        if not isinstance(bot["import"], str) or not bot["import"].strip():
+            return f"rule #{idx}: 'import' must be a non-empty string"
+        unknown = [k for k in bot if k not in BOT_KEYS]
+        if unknown:
+            return f"rule #{idx}: unknown key(s): {', '.join(unknown)}"
+        return None
+    name = bot.get("name")
+    if not name or not isinstance(name, str):
+        return f"rule #{idx}: missing or invalid 'name'"
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        return (f"rule '{name}': name must be lower-case kebab-case "
+                f"(rule names are exposed in Prometheus metrics)")
+    action = bot.get("action")
+    if action not in ACTIONS:
+        return (f"rule '{name}': action must be one of {', '.join(ACTIONS)}")
+    matchers = ("user_agent_regex", "path_regex", "headers_regex",
+                "remote_addresses", "expression")
+    if action == "WEIGH" and "weight" not in bot:
+        return f"rule '{name}': WEIGH rules need a 'weight' block"
+    if action != "WEIGH" and not any(k in bot for k in matchers):
+        return (f"rule '{name}': needs at least one matcher "
+                f"({', '.join(matchers)}) or 'remote_addresses'")
+    unknown = [k for k in bot if k not in BOT_KEYS]
+    if unknown:
+        return f"rule '{name}': unknown key(s): {', '.join(unknown)}"
+    for rx in ("user_agent_regex", "path_regex"):
+        v = bot.get(rx)
+        if v is not None:
+            try:
+                re.compile(v)
+            except re.error as e:
+                return f"rule '{name}': invalid {rx} '{v}': {e}"
+    hr = bot.get("headers_regex")
+    if hr is not None:
+        if not isinstance(hr, dict) or not hr:
+            return f"rule '{name}': headers_regex must be a non-empty mapping"
+        for h, v in hr.items():
+            if not isinstance(h, str) or not isinstance(v, str):
+                return f"rule '{name}': headers_regex entries must be strings"
+            try:
+                re.compile(v)
+            except re.error as e:
+                return f"rule '{name}': invalid headers_regex '{v}': {e}"
+    ra = bot.get("remote_addresses")
+    if ra is not None:
+        if not isinstance(ra, list) or not ra or \
+           not all(isinstance(x, str) for x in ra):
+            return f"rule '{name}': remote_addresses must be a list of CIDRs"
+    ch = bot.get("challenge")
+    if ch is not None:
+        if not isinstance(ch, dict):
+            return f"rule '{name}': challenge must be a mapping"
+        bad = [k for k in ch if k not in CHALLENGE_KEYS]
+        if bad:
+            return f"rule '{name}': unknown challenge key(s): {', '.join(bad)}"
+        if "difficulty" in ch and (not isinstance(ch["difficulty"], int)
+                                   or not 0 <= ch["difficulty"] <= 99):
+            return f"rule '{name}': challenge.difficulty must be an integer 0-99"
+        if "algorithm" in ch and ch["algorithm"] not in CHALLENGE_ALGOS:
+            return (f"rule '{name}': challenge.algorithm must be one of "
+                    f"{', '.join(CHALLENGE_ALGOS)}")
+    w = bot.get("weight")
+    if w is not None:
+        if not isinstance(w, dict) or "adjust" not in w:
+            return f"rule '{name}': weight must be a mapping with 'adjust'"
+        if not isinstance(w["adjust"], int):
+            return f"rule '{name}': weight.adjust must be an integer"
+    return None
+
+
+def _validate_policy_text(text):
+    """Full validation: YAML parse + doc-schema rules. Returns (data, err)."""
+    try:
+        import yaml
+    except ImportError:
+        return None, "PyYAML not available on this server"
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        return None, f"YAML parse error: {e}"
+    if data is None:
+        return {}, "empty policy"
+    if not isinstance(data, dict):
+        return None, "policy must be a mapping (bots:, status_codes:, ...)"
+    unknown = [k for k in data if k not in POLICY_KEYS]
+    if unknown:
+        return None, f"unknown top-level key(s): {', '.join(unknown)}"
+    sc = data.get("status_codes")
+    if sc is not None:
+        if not isinstance(sc, dict):
+            return None, "status_codes must be a mapping"
+        for k, v in sc.items():
+            if k not in ("CHALLENGE", "DENY"):
+                return None, f"status_codes: unknown action '{k}'"
+            if not isinstance(v, int) or not 100 <= v <= 599:
+                return None, f"status_codes.{k} must be an HTTP code 100-599"
+    bots = data.get("bots")
+    if bots is not None:
+        if not isinstance(bots, list):
+            return None, "bots must be a list of rules"
+        seen = set()
+        for i, bot in enumerate(bots, 1):
+            err = _validate_bot(bot, i)
+            if err:
+                return None, err
+            nm = bot.get("name")
+            if nm:
+                if nm in seen:
+                    return None, f"duplicate rule name '{nm}'"
+                seen.add(nm)
+        return data, None
+
+
+def policy_set(s):
+    text = sys.stdin.read()
+    data, err = _validate_policy_text(text)
+    if err:
+        fail(f"invalid policy: {err}")
+
+    path = policy_path(s)
+    uid = pwd.getpwnam(app).pw_uid
+
+    # Atomic install: write temp file in the same dir, validate with a live
+    # anubis instance on a scratch port, then rename + restart.
+    with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(path),
+                                     prefix=".policy-", delete=False) as tf:
+        tf.write(text)
+        tmp = tf.name
+    try:
+        os.chmod(tmp, 0o644)
+        probe = run([os.path.join(s["install_dir"], "bin", "anubis"),
+                     "-bind", "127.0.0.1:0", "-policy-fname", tmp,
+                     "-difficulty", "1", "-healthcheck"])
+        if probe.returncode != 0:
+            fail("anubis rejected the policy: "
+                 f"{(probe.stderr or probe.stdout).strip()[-400:]}")
+        # keep root ownership of the policy file (it is not app-writable)
+        os.replace(tmp, path)
+        os.chown(path, 0, 0)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+    r = run(["systemctl", "restart", app])
+    if r.returncode != 0:
+        fail(f"anubis failed to restart: {r.stderr.strip()[-300:]}")
+    # confirm it actually came up and answers checks. Any HTTP response
+    # (401 challenge / 403 deny / 502 no-target) proves it is serving;
+    # curl -sf would false-fail on those.
+    import time
+    for _ in range(20):
+        chk = run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+                   f"http://127.0.0.1:{s['port']}/.within.website/x/cmd/anubis/api/check"])
+        code = (chk.stdout or "").strip()
+        if code.isdigit() and 100 <= int(code) <= 599:
+            break
+        time.sleep(0.5)
+    else:
+        fail("anubis did not become healthy after policy change")
+    print(json.dumps({"ok": True}))
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="mode", required=True)
     sp = sub.add_parser("set")
     sp.add_argument("--domains", default=None)
     sp.add_argument("--difficulty", type=int, default=None)
-    sub.add_parser("status")
+    sp = sub.add_parser("status")
     sub.add_parser("render")
+    sub.add_parser("policy-get")
+    sub.add_parser("policy-set")
     sub.add_parser("remove-all")
     args = p.parse_args()
 
@@ -262,6 +471,14 @@ def main():
         if args.mode == "render":
             apply(parse_list(s["protected_domains"]), s)
             print(json.dumps({"ok": True}))
+            return
+
+        if args.mode == "policy-get":
+            policy_get(s)
+            return
+
+        if args.mode == "policy-set":
+            policy_set(s)
             return
 
         if args.mode == "remove-all":
