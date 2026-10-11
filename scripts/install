@@ -46,6 +46,11 @@ mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
 install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
+# non-catalog app: pin the tile logo for the portal (permission update
+# stores it by sha256 and serves it from /yunohost/sso/applogos/).
+mkdir -p "/usr/share/yunohost/applogos"
+cp "$YNH_APP_BASEDIR/logos/anubis.png" "/usr/share/yunohost/applogos/anubis.png"
+yunohost user permission update "$app.main" --logo "$YNH_APP_BASEDIR/logos/anubis.png" || true
 
 # Templates used by the root helper at runtime (registry copy is primary;
 # these are backed up with the app).
@@ -85,7 +90,7 @@ ynh_config_add_nginx
 ynh_config_add_systemd --service="$app" --template="systemd.service"
 ynh_config_add_systemd --service="$app-webui" --template="systemd-webui.service"
 
-yunohost service add "$app" --description="Anubis bot shield (auth_request)" --log="/var/log/syslog"
+yunohost service add "$app" --description="Anubis bot shield (proof-of-work challenge)" --log="/var/log/syslog"
 yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
 
 #=================================================

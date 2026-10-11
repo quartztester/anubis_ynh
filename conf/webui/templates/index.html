@@ -27,6 +27,7 @@
   #msg { margin: .75rem 0; padding: .6rem .9rem; border-radius: 8px; display: none; }
   #msg.ok { display: block; background: rgba(26,127,55,.12); border: 1px solid #1a7f37; }
   #msg.err { display: block; background: rgba(200,0,0,.12); border: 1px solid #c00; }
+  #dirty { margin: .75rem 0; padding: .6rem .9rem; border-radius: 8px; background: rgba(179,89,0,.12); border: 1px solid #b35900; font-size: .95rem; }
   .note { opacity: .75; font-size: .9rem; }
   .selfrow { opacity: .65; }
   .rule { display: flex; gap: .75rem; align-items: baseline; padding: .5rem 0; border-bottom: 1px solid rgba(128,128,128,.2); flex-wrap: wrap; }
@@ -59,6 +60,7 @@ YunoHost portal, ACME and this page are never challenged.</p>
 
 {% if data %}
 <div id="msg"></div>
+<div id="dirty" style="display:none">&#9888; You have unsaved changes &mdash; they will be lost if you close or reload this tab.</div>
 
 <div class="card">
   <h2 style="margin-top:0">Protected domains</h2>
@@ -192,6 +194,32 @@ function flash(cls, text) {
   if (cls === 'ok') setTimeout(() => { msg.style.display = 'none'; }, 6000);
 }
 
+// --- unsaved-changes tracking ---------------------------------------------
+// A dirty flag per save target: domains+difficulty ("Apply"), rules+packs
+// ("Save rules"), raw YAML ("Save YAML"). Any pending change trips the
+// browser's leave-page confirmation and shows the warning banner.
+const dirty = { domains: false, rules: false, yaml: false };
+const dirtyNote = document.getElementById('dirty');
+function anyDirty() { return dirty.domains || dirty.rules || dirty.yaml; }
+function updateDirtyUI() {
+  if (dirtyNote) dirtyNote.style.display = anyDirty() ? 'block' : 'none';
+}
+function markDirty(k) { dirty[k] = true; updateDirtyUI(); }
+function clearDirty(k) { dirty[k] = false; updateDirtyUI(); }
+
+window.addEventListener('beforeunload', e => {
+  if (anyDirty()) { e.preventDefault(); e.returnValue = ''; }
+});
+
+document.querySelectorAll('.dom').forEach(
+  i => i.addEventListener('change', () => markDirty('domains')));
+const diffInput = document.getElementById('difficulty');
+if (diffInput) diffInput.addEventListener('input', () => markDirty('domains'));
+document.querySelectorAll('#packs input').forEach(
+  cb => cb.addEventListener('change', () => markDirty('rules')));
+const polTa = document.getElementById('policy');
+if (polTa) polTa.addEventListener('input', () => markDirty('yaml'));
+
 async function apply() {
   const btn = document.getElementById('apply');
   const domains = [...document.querySelectorAll('.dom:checked')].map(i => i.value);
@@ -206,6 +234,7 @@ async function apply() {
     const j = await r.json();
     if (r.ok) {
       flash('ok', 'Saved. Protected: ' + (j.protected.length ? j.protected.join(', ') : '(none)') + '. nginx reloaded.');
+      clearDirty('domains');
       document.querySelectorAll('.dom').forEach(i =>
         i.closest('tr').querySelector('.badge').outerHTML =
           i.checked ? '<span class="badge on">protected</span>' : '<span class="badge off">open</span>');
@@ -242,25 +271,29 @@ async function saveRules() {
       body: JSON.stringify({rules: collectRules()})
     });
     const j = await r.json();
-    if (r.ok) flash('ok', 'Rules saved and applied. Bad bots are being stopped with the new rules.');
+    if (r.ok) { flash('ok', 'Rules saved and applied. Bad bots are being stopped with the new rules.'); clearDirty('rules'); }
     else flash('err', 'Could not save: ' + (j.error || JSON.stringify(j)));
   } catch (e) { flash('err', 'Request failed: ' + e); }
   btn.disabled = false;
 }
 
 async function resetPolicy(btn) {
-  if (!confirm('Restore the default bot rules?\\n\\nThis discards ALL rule changes (packs and custom rules) and puts back the rules this app shipped with. Domains and difficulty are kept.')) return;
+  if (!confirm('Restore the default bot rules?\n\nThis discards ALL rule changes (packs and custom rules) and puts back the rules this app shipped with. Domains and difficulty are kept.')) return;
   btn.disabled = true;
   try {
     const r = await fetch('api/policy/default', {method: 'POST'});
     const j = await r.json();
-    if (r.ok) { flash('ok', 'Default rules restored. Reloading the page…'); setTimeout(() => location.reload(), 900); }
+    if (r.ok) {
+      dirty.domains = dirty.rules = dirty.yaml = false; updateDirtyUI();
+      flash('ok', 'Default rules restored. Reloading the page…');
+      setTimeout(() => location.reload(), 900);
+    }
     else flash('err', 'Could not restore: ' + (j.error || JSON.stringify(j)));
   } catch (e) { flash('err', 'Request failed: ' + e); }
   btn.disabled = false;
 }
 
-function rmRule(btn) { btn.closest('.rule').remove(); }
+function rmRule(btn) { btn.closest('.rule').remove(); markDirty('rules'); }
 
 function toggleNew() {
   const d = document.getElementById('newrule');
@@ -286,6 +319,7 @@ function addRule() {
     '<span class="grow"><b>' + name + '</b><br><span class="note">' + actLabel + ' visitors whose ' + matLabel + ' matches ' + mval + '</span></span>' +
     '<button class="rm" title="Remove this rule" onclick="rmRule(this)">&#215;</button>';
   document.getElementById('rules').appendChild(div);
+  markDirty('rules');
   document.getElementById('nr-name').value = ''; document.getElementById('nr-value').value = '';
   toggleNew();
 }
@@ -293,7 +327,7 @@ function addRule() {
 async function loadYaml() {
   const r = await fetch('api/policy');
   const j = await r.json();
-  if (r.ok) document.getElementById('policy').value = j.policy || '';
+  if (r.ok) { document.getElementById('policy').value = j.policy || ''; clearDirty('yaml'); }
   else flash('err', 'Could not load: ' + (j.error || ''));
 }
 document.querySelector('details') && (document.getElementById('policy').value = '', loadYaml());
@@ -306,7 +340,7 @@ async function saveYaml() {
       body: JSON.stringify({policy: ta.value})
     });
     const j = await r.json();
-    if (r.ok) flash('ok', 'Policy saved and applied.');
+    if (r.ok) { flash('ok', 'Policy saved and applied.'); clearDirty('yaml'); }
     else flash('err', 'Could not save: ' + (j.error || JSON.stringify(j)));
   } catch (e) { flash('err', 'Request failed: ' + e); }
 }
