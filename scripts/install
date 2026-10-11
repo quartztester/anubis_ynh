@@ -1,0 +1,106 @@
+#!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# PRECHECKS
+#=================================================
+
+# The GUI is excluded from its own gate by host+prefix; a subpath install
+# would complicate that, so pin it to the root of the chosen domain.
+if [[ "${path:-/}" != "/" ]]; then
+	ynh_die "The Anubis GUI must be installed at the root of a domain (path=/)."
+fi
+
+#=================================================
+# INITIALIZE SETTINGS
+#=================================================
+ynh_script_progression "Initializing settings..."
+
+# Persistent JWT signing key for Anubis (single source of truth: app settings;
+# never regenerated on upgrade/restore or issued challenge cookies break).
+ynh_app_setting_set_default --app="$app" --key=hs512_secret --value="$(ynh_string_random --length=64)"
+
+# Normalise the initial domain list (validated against `yunohost domain list`
+# inside the apply helper).
+ynh_app_setting_set_default --app="$app" --key=protected_domains --value=""
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Setting up source files..."
+
+ynh_setup_source --dest_dir="$install_dir"
+
+chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
+chown -R root:root "$install_dir"
+chmod 0755 "$install_dir/bin/anubis"
+
+# Flask admin GUI lives beside the binary
+mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
+install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
+
+# Templates used by the root helper at runtime (registry copy is primary;
+# these are backed up with the app).
+install -m 0644 "$YNH_APP_BASEDIR/conf/domain-fragment.conf" "$install_dir/domain-fragment.conf"
+install -m 0644 "$YNH_APP_BASEDIR/conf/gate.lua" "$install_dir/gate.lua"
+install -m 0644 "$YNH_APP_BASEDIR/conf/policy.yaml" "$install_dir/policy.yaml"
+
+#=================================================
+# ROOT HELPER + SUDOERS
+#=================================================
+ynh_script_progression "Installing the privileged apply helper..."
+
+install -m 0755 "$YNH_APP_BASEDIR/conf/apply.py" "$APPLY_BIN"
+
+cat > "$SUDOERS_FILE" <<EOF
+# Let the $app webui regenerate nginx fragments via the apply helper
+$app ALL=(root) NOPASSWD: $APPLY_BIN status
+$app ALL=(root) NOPASSWD: $APPLY_BIN set --domains *
+$app ALL=(root) NOPASSWD: $APPLY_BIN set --domains * --difficulty *
+$app ALL=(root) NOPASSWD: $APPLY_BIN render
+EOF
+chmod 0440 "$SUDOERS_FILE"
+visudo -cf "$SUDOERS_FILE" || ynh_die "Invalid sudoers syntax"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Adding system configurations related to $app..."
+
+# Webui nginx vhost fragment (SSO-gated location)
+ynh_config_add_nginx
+
+# Systemd units
+ynh_config_add_systemd --service="$app" --template="systemd.service"
+ynh_config_add_systemd --service="$app-webui" --template="systemd-webui.service"
+
+yunohost service add "$app" --description="Anubis bot shield (auth_request)" --log="/var/log/syslog"
+yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
+
+#=================================================
+# APPLY PROTECTION + START SERVICES
+#=================================================
+ynh_script_progression "Applying initial domain protection..."
+
+ynh_app_setting_set --app="$app" --key=difficulty --value="${difficulty:-4}"
+if [[ -n "${protected_domains:-}" ]]; then
+	run_apply set --domains "$protected_domains"
+else
+	run_apply render
+fi
+
+ynh_systemctl --service="$app-webui" --action="start" --log_path="systemd" --wait_until="Serving on"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Installation of $app completed"

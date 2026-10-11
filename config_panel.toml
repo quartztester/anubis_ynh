@@ -1,0 +1,22 @@
+#:schema https://github.com/YunoHost/apps/raw/main/schemas/config_panel.v1.schema.json
+
+version = "1.0"
+
+[main]
+name.en = "Anubis configuration"
+services = ["__APP__"]
+
+    [main.protection]
+    name.en = "Bot shield"
+
+        [main.protection.difficulty]
+        ask.en = "Challenge difficulty (0-8, higher = harder for bots, slower for humans)"
+        type = "number"
+        optional = true
+        bind = "settings"
+
+        [main.protection.note_domains]
+        ask.en = "Which domains are protected is managed from the Anubis web GUI (portal tile)."
+        type = "alert"
+        style = "info"
+        bind = "null"

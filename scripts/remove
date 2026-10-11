@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# REMOVE ALL ANUBIS PROTECTION FRAGMENTS
+#=================================================
+ynh_script_progression "Removing Anubis protection from all domains..."
+
+if [[ -x "$APPLY_BIN" ]]; then
+	ANUBIS_APP="$app" "$APPLY_BIN" remove-all || ynh_warn "Could not run apply helper during removal (may already be gone)"
+fi
+
+#=================================================
+# STOP AND REMOVE SERVICES
+#=================================================
+ynh_script_progression "Removing systemd services..."
+
+ynh_config_remove_systemd "$app-webui"
+ynh_config_remove_systemd "$app"
+
+yunohost service remove "$app"
+yunohost service remove "$app-webui"
+
+#=================================================
+# REMOVE ROOT HELPER + NGINX + SUDOERS
+#=================================================
+ynh_script_progression "Removing system configurations..."
+
+ynh_safe_rm "$APPLY_BIN"
+ynh_safe_rm "$SUDOERS_FILE"
+ynh_safe_rm "/etc/nginx/conf.d/anubis-client-ip.conf"
+ynh_config_remove_nginx
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Removal of $app completed"

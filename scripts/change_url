@@ -1,0 +1,47 @@
+#!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SERVICES
+#=================================================
+ynh_script_progression "Stopping $app's services..."
+
+if [[ "${path:-/}" != "/" ]]; then
+	ynh_die "The Anubis GUI must stay at the root of a domain (path=/)."
+fi
+
+ynh_systemctl --service="$app-webui" --action="stop"
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
+ynh_script_progression "Updating NGINX web server configuration for the GUI..."
+
+ynh_safe_rm "/etc/nginx/conf.d/$old_domain.d/$app.conf"
+ynh_config_add_nginx
+
+#=================================================
+# RE-RENDER GATE (GUI exclusion path depends on domain/path)
+#=================================================
+ynh_script_progression "Re-applying protection fragments..."
+
+run_apply render
+
+#=================================================
+# START SERVICES
+#=================================================
+ynh_script_progression "Starting $app's services..."
+
+ynh_systemctl --service="$app-webui" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Change of URL completed for $app"

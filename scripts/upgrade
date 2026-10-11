@@ -1,0 +1,85 @@
+#!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SERVICES
+#=================================================
+ynh_script_progression "Stopping $app's services..."
+
+ynh_systemctl --service="$app-webui" --action="stop"
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# ENSURE SETTINGS EXIST (idempotent, never rotated)
+#=================================================
+ynh_script_progression "Ensuring settings..."
+
+ynh_app_setting_set_default --app="$app" --key=hs512_secret --value="$(ynh_string_random --length=64)"
+ynh_app_setting_set_default --app="$app" --key=protected_domains --value=""
+ynh_app_setting_set_default --app="$app" --key=difficulty --value="4"
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Upgrading source files..."
+
+# Keep the settings-bearing files across the new download
+ynh_setup_source --dest_dir="$install_dir" --keep="anubis.env gate.lua webui domain-fragment.conf"
+
+chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
+chown -R root:root "$install_dir"
+chmod 0755 "$install_dir/bin/anubis"
+
+# Refresh webui + templates + helper from the (possibly newer) package
+mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
+install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
+install -m 0644 "$YNH_APP_BASEDIR/conf/domain-fragment.conf" "$install_dir/domain-fragment.conf"
+install -m 0644 "$YNH_APP_BASEDIR/conf/gate.lua" "$install_dir/gate.lua"
+install -m 0644 "$YNH_APP_BASEDIR/conf/policy.yaml" "$install_dir/policy.yaml"
+install -m 0755 "$YNH_APP_BASEDIR/conf/apply.py" "$APPLY_BIN"
+
+#=================================================
+# REAPPLY SYSTEM CONFIGS
+#=================================================
+ynh_script_progression "Re-applying system configurations..."
+
+ynh_config_add_nginx
+ynh_config_add_systemd --service="$app" --template="systemd.service"
+ynh_config_add_systemd --service="$app-webui" --template="systemd-webui.service"
+
+if [[ ! -f "$SUDOERS_FILE" ]]; then
+	cat > "$SUDOERS_FILE" <<EOF
+$app ALL=(root) NOPASSWD: $APPLY_BIN status
+$app ALL=(root) NOPASSWD: $APPLY_BIN set --domains *
+$app ALL=(root) NOPASSWD: $APPLY_BIN set --domains * --difficulty *
+$app ALL=(root) NOPASSWD: $APPLY_BIN render
+EOF
+	chmod 0440 "$SUDOERS_FILE"
+	visudo -cf "$SUDOERS_FILE" || ynh_die "Invalid sudoers syntax"
+fi
+
+yunohost service add "$app" --description="Anubis bot shield (auth_request)" --log="/var/log/syslog"
+yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
+
+#=================================================
+# START + APPLY
+#=================================================
+ynh_script_progression "Restarting services and re-applying protection..."
+
+ynh_systemctl --service="$app" --action="start"
+run_apply render
+ynh_systemctl --service="$app-webui" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Upgrade of $app completed"

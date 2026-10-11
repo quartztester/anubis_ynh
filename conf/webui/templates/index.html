@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anubis - bot shield</title>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='anubis.png') }}">
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+  h1 { font-size: 1.5rem; display: flex; align-items: center; gap: .5rem; }
+  h1 img { width: 2rem; height: 2rem; }
+  .card { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 1rem 1.25rem; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid rgba(128,128,128,.25); }
+  th { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+  .badge { font-size: .75rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid currentColor; }
+  .on { color: #1a7f37; } .off { color: #888; } .warn { color: #b35900; }
+  button { font: inherit; padding: .5rem 1.2rem; border-radius: 8px; border: 1px solid #888; background: #4a7ebb; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  input[type=number] { width: 4.5rem; font: inherit; padding: .25rem .4rem; }
+  #msg { margin: .75rem 0; padding: .6rem .9rem; border-radius: 8px; display: none; }
+  #msg.ok { display: block; background: rgba(26,127,55,.12); border: 1px solid #1a7f37; }
+  #msg.err { display: block; background: rgba(200,0,0,.12); border: 1px solid #c00; }
+  .note { opacity: .75; font-size: .9rem; }
+  .selfrow { opacity: .65; }
+</style>
+</head>
+<body>
+<h1><img src="{{ url_for('static', filename='anubis.png') }}" alt="Anubis logo"> Anubis bot shield</h1>
+<p class="note">Logged in as <b>{{ user }}</b>. Tick the domains that should show a
+proof-of-work challenge to visitors. Changes apply to nginx immediately; the
+YunoHost portal, ACME and this page are never challenged.</p>
+
+{% if error %}
+<div class="msg err" id="msg" style="display:block">Could not read current state: {{ error }}</div>
+{% endif %}
+
+{% if data %}
+<div id="msg"></div>
+
+<div class="card">
+  <table id="domains">
+    <thead><tr><th>Protect</th><th>Domain</th><th>State</th></tr></thead>
+    <tbody>
+    {% for d in data.domains %}
+      <tr class="{{ 'selfrow' if d.is_app_domain }}">
+        <td>
+          {% if d.is_app_domain %}
+            <input type="checkbox" disabled title="Cannot protect the domain hosting the Anubis GUI itself">
+          {% else %}
+            <input type="checkbox" class="dom" value="{{ d.domain }}" {{ 'checked' if d.protected }}>
+          {% endif %}
+        </td>
+        <td><code>{{ d.domain }}</code>{% if d.is_app_domain %} <span class="badge warn">Anubis GUI</span>{% endif %}</td>
+        <td>
+          {% if d.protected %}<span class="badge on">protected</span>
+          {% else %}<span class="badge off">open</span>{% endif %}
+          {% if not d.has_vhost %}<span class="badge warn">no vhost yet</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <label>Challenge difficulty (0&ndash;8):
+    <input type="number" id="difficulty" min="0" max="8" value="{{ data.difficulty }}">
+  </label>
+  <span class="note">&mdash; 4 is the default; higher = slower for bots <i>and</i> humans.</span>
+  <p>
+    <button id="apply" onclick="apply()">Apply</button>
+    <span class="note" id="status">Anubis: <b>{{ "running" if data.anubis_running else "NOT RUNNING" }}</b>
+      &middot; metrics/health: 127.0.0.1:{{ app_port }} via systemd</span>
+  </p>
+</div>
+
+<script>
+async function apply() {
+  const btn = document.getElementById('apply');
+  const msg = document.getElementById('msg');
+  const domains = [...document.querySelectorAll('.dom:checked')].map(i => i.value);
+  const difficulty = parseInt(document.getElementById('difficulty').value, 10);
+  btn.disabled = true; msg.className = ''; msg.style.display = 'none';
+  try {
+    const r = await fetch('api/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({protected: domains, difficulty})
+    });
+    const j = await r.json();
+    if (r.ok) {
+      msg.className = 'ok'; msg.textContent =
+        'Saved. Protected: ' + (j.protected.length ? j.protected.join(', ') : '(none)') + '. nginx reloaded.';
+      document.querySelectorAll('.dom').forEach(i =>
+        i.closest('tr').querySelector('.badge').outerHTML =
+          i.checked ? '<span class="badge on">protected</span>' : '<span class="badge off">open</span>');
+    } else {
+      msg.className = 'err'; msg.textContent = 'Error: ' + (j.error || JSON.stringify(j));
+    }
+  } catch (e) {
+    msg.className = 'err'; msg.textContent = 'Request failed: ' + e;
+  }
+  msg.style.display = 'block';
+  btn.disabled = false;
+}
+</script>
+{% endif %}
+
+<p class="note">Powered by <a href="https://github.com/TecharoHQ/anubis">Anubis</a>
+in nginx <code>auth_request</code> mode &middot; packaged natively for YunoHost.</p>
+</body>
+</html>

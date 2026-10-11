@@ -1,0 +1,93 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
+
+packaging_format = 2
+
+id = "anubis"
+name = "Anubis"
+description.en = "Proof-of-work bot shield for your domains, with domain-selection GUI"
+description.fr = "Bouclier anti-robot à preuve de travail pour vos domaines, avec interface de sélection"
+
+version = "1.28.1~ynh1"
+
+maintainers = ["quartztester"]
+
+[upstream]
+license = "MIT"
+website = "https://anubis.techaro.lol/"
+admindoc = "https://anubis.techaro.lol/docs/admin/installation"
+code = "https://github.com/TecharoHQ/anubis"
+fund = "https://www.patreon.com/cadey"
+
+[integration]
+yunohost = ">= 12.1.17"
+helpers_version = "2.1"
+architectures = ["amd64", "arm64"]
+multi_instance = false
+
+ldap = "not_relevant"
+sso = true
+
+disk = "100M"
+ram.build = "50M"
+ram.runtime = "100M"
+
+[install]
+    [install.domain]
+    # domain where the Anubis admin GUI will be served
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/"
+
+    [install.init_main_permission]
+    # the GUI lets you enable/disable protection for every domain of the
+    # server: keep it restricted to trusted admins
+    type = "group"
+    default = "admins"
+
+    [install.difficulty]
+    ask.en = "Challenge difficulty (0-8, higher = harder for bots, slower for humans)"
+    ask.fr = "Difficulté du défi (0-8, plus haut = plus dur pour les robots)"
+    type = "number"
+    optional = true
+    default = 4
+
+    [install.protected_domains]
+    ask.en = "Comma-separated list of domains to protect now (empty = configure later in the Anubis web GUI)"
+    ask.fr = "Liste de domaines à protéger (vide = configurer plus tard dans l'interface web)"
+    type = "string"
+    optional = true
+    default = ""
+
+[resources]
+    [resources.sources]
+
+    [resources.sources.main]
+    amd64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.1/anubis-1.28.1-linux-amd64.tar.gz"
+    amd64.sha256 = "adcb3c2fdfd0fb91cbf7e8376dbcc479f654c85dd3795db3e9a06004786bbdc9"
+    arm64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.1/anubis-1.28.1-linux-arm64.tar.gz"
+    arm64.sha256 = "2eed4f6e40de35554aad6a66dfd017cdc76769c7141af3b0627824c910703060"
+
+    autoupdate.strategy = "latest_github_release"
+    [resources.sources.main.autoupdate.asset]
+    amd64 = "anubis-.*-linux-amd64.tar.gz"
+    arm64 = "anubis-.*-linux-arm64.tar.gz"
+
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.permissions]
+    main.url = "/"
+
+    [resources.ports]
+    # Anubis challenge/check server (loopback only)
+    main.default = 8923
+    # Anubis metrics/health endpoint (loopback only)
+    metrics.default = 9090
+    # small Flask admin GUI (loopback only)
+    webui.default = 8924
+
+    [resources.apt]
+    packages = "python3-flask, python3-waitress"
