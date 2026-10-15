@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 
+
+.manifest.v2.schema.json
+.tests.v1.schema.json
+.spdx_licenses

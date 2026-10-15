@@ -32,10 +32,7 @@ Pull request are welcome and should target the [`testing` branch](https://github
 
 The `testing` branch can be tested using:
 ```
-<h1>
-  <img src="logos/anubis.png" width="48" alt="anubis_ynh logo">
-  fresh install:
-</h1>
+# fresh install:
 sudo yunohost app install https://github.com/YunoHost-Apps/anubis_ynh/tree/testing
 
 # upgrade an existing install:
