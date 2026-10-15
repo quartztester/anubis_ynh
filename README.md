@@ -18,6 +18,10 @@ Proof-of-work bot shield for your domains, with domain-selection GUI
 <a href="https://github.com/YunoHost-Apps/anubis_ynh/issues"><img height="100px" src="https://github.com/YunoHost/yunohost-artwork/raw/refs/heads/main/badges/neopossum-badges/badge_report_an_issue.svg"/></a>
 </div>
 
+## Screenshots
+
+![Anubis admin GUI: pick which domains are shielded](./doc/screenshots/gui-domains.png)
+
 ## 📦 Developer info
 
 [![Automatic tests level](https://apps.yunohost.org/badge/cilevel/anubis)](https://ci-apps.yunohost.org/ci/apps/anubis/)

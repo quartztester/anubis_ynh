@@ -15,3 +15,8 @@ Anubis est un intermédiaire (middleware) anti-robots qui protège vos sites web
 
 - Projet amont : <https://github.com/TecharoHQ/anubis>
 - Paquet YunoHost : <https://github.com/quartztester/anubis_ynh>
+
+## Screenshots
+
+![Anubis admin GUI: pick which domains are shielded](./doc/screenshots/gui-domains.png)
+
