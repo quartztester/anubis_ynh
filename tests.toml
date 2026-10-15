@@ -4,8 +4,6 @@ test_format = 1.0
 
 [default]
 
-    # The app must be installed at the root of a dedicated domain; the GUI
-    # has absolute-path expectations and the gate excludes it by host+prefix.
-    exclude = ["install.subdir", "install.multi"]
+    # Upgrade tests: last commit of each previous package version.
 
-    args.protected_domains = ""
+    test_upgrade_from.7198bb9.name = "1.28.1~ynh1"
