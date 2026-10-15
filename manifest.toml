@@ -7,7 +7,7 @@ name = "Anubis"
 description.en = "Proof-of-work bot shield for your domains, with domain-selection GUI"
 description.fr = "Bouclier anti-robot à preuve de travail pour vos domaines, avec interface de sélection"
 
-version = "1.28.1~ynh1"
+version = "1.28.1~ynh2"
 
 maintainers = ["quartztester"]
 

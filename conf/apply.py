@@ -67,16 +67,13 @@ def parse_list(raw):
 
 
 def load_template(name):
-    # The registry copy lives at /etc/yunohost/apps/<app>/conf/<name> after
-    # install; we also keep a copy in the install dir (backed up with the app).
-    for path in (
-        os.path.join(REGISTRY, app, "conf", name),
-        os.path.join(SETTING_CACHE["install_dir"], name),
-    ):
-        if os.path.isfile(path):
-            with open(path) as f:
-                return f.read()
-    raise RuntimeError(f"template {name} not found")
+    # YunoHost copies the package's conf/ into the app registry at
+    # install/upgrade; that copy is the single source of truth.
+    path = os.path.join(REGISTRY, app, "conf", name)
+    if not os.path.isfile(path):
+        raise RuntimeError(f"template {name} not found at {path}")
+    with open(path) as f:
+        return f.read()
 
 
 SETTING_CACHE = {}
