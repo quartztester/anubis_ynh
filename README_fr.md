@@ -1,4 +1,7 @@
-# Anubis pour YunoHost
+<h1>
+  <img src="logos/anubis.png" width="48" alt="anubis_ynh logo">
+  Anubis pour YunoHost
+</h1>
 
 Anubis est un intermédiaire (middleware) anti-robots qui protège vos sites web par une preuve de travail, sans dépendre d'un service tiers. Les visiteurs légitimes passent automatiquement après un court défi de preuve de travail calculé dans leur navigateur ; les robots sont bloqués.
 
@@ -18,5 +21,5 @@ Anubis est un intermédiaire (middleware) anti-robots qui protège vos sites web
 
 ## Screenshots
 
-![Anubis admin GUI: pick which domains are shielded](./doc/screenshots/gui-domains.png)
+![anubis gui domains](./doc/screenshots/gui-domains.png)
 

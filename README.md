@@ -4,7 +4,7 @@ It shall NOT be edited by hand.
 -->
 
 <h1>
-  <img src="https://raw.githubusercontent.com/YunoHost/apps/main/logos/anubis.png" width="32px" alt="Logo of Anubis">
+  <img src="logos/anubis.png" width="32px" alt="Logo of Anubis bot shield">
   Anubis, packaged for YunoHost
 </h1>
 
@@ -20,7 +20,7 @@ Proof-of-work bot shield for your domains, with domain-selection GUI
 
 ## Screenshots
 
-![Anubis admin GUI: pick which domains are shielded](./doc/screenshots/gui-domains.png)
+![anubis gui domains](./doc/screenshots/gui-domains.png)
 
 ## 📦 Developer info
 
@@ -32,7 +32,10 @@ Pull request are welcome and should target the [`testing` branch](https://github
 
 The `testing` branch can be tested using:
 ```
-# fresh install:
+<h1>
+  <img src="logos/anubis.png" width="48" alt="anubis_ynh logo">
+  fresh install:
+</h1>
 sudo yunohost app install https://github.com/YunoHost-Apps/anubis_ynh/tree/testing
 
 # upgrade an existing install:
