@@ -27,7 +27,7 @@ ynh_safe_rm "/etc/nginx/conf.d/$old_domain.d/$app.conf"
 ynh_config_add_nginx
 
 #=================================================
-# RE-RENDER GATE (GUI exclusion path depends on domain/path)
+# RE-RENDER GATE (GUI EXCLUSION PATH DEPENDS ON DOMAIN/PATH)
 #=================================================
 ynh_script_progression "Re-applying protection fragments..."
 

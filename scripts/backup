@@ -25,4 +25,8 @@ for f in /etc/nginx/conf.d/*.d/zz-anubis.conf; do
 	[[ -e "$f" ]] && ynh_backup "$f"
 done
 
+#=================================================
+# END OF SCRIPT
+#=================================================
+
 ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

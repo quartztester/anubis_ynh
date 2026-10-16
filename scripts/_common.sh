@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#=================================================
+# COMMON VARIABLES AND CUSTOM HELPERS
+#=================================================
+
 # Local variables dedicated to the app go here
 
 # Absolute path of the root helper installed by this package

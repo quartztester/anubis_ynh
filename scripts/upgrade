@@ -16,7 +16,7 @@ ynh_systemctl --service="$app-webui" --action="stop"
 ynh_systemctl --service="$app" --action="stop"
 
 #=================================================
-# ENSURE SETTINGS EXIST (idempotent, never rotated)
+# ENSURE SETTINGS EXIST (IDEMPOTENT, NEVER ROTATED)
 #=================================================
 ynh_script_progression "Ensuring settings..."
 
