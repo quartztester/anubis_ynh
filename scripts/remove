@@ -13,7 +13,7 @@ source /usr/share/yunohost/helpers
 ynh_script_progression "Removing Anubis protection from all domains..."
 
 if [[ -x "$APPLY_BIN" ]]; then
-	ANUBIS_APP="$app" "$APPLY_BIN" remove-all || ynh_warn "Could not run apply helper during removal (may already be gone)"
+	ANUBIS_APP="$app" "$APPLY_BIN" remove-all || ynh_print_warn "Could not run apply helper during removal (may already be gone)"
 fi
 
 #=================================================
