@@ -46,6 +46,19 @@
   textarea { width: 100%; min-height: 22rem; font: 0.85rem/1.5 ui-monospace, Menlo, Consolas, monospace; padding: .75rem; border-radius: 8px; border: 1px solid rgba(128,128,128,.5); background: transparent; color: inherit; tab-size: 2; box-sizing: border-box; }
   .actions { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin: .75rem 0; }
   code { background: rgba(128,128,128,.15); padding: .05rem .3rem; border-radius: 4px; }
+  input[type=checkbox] { width: 1.25rem; height: 1.25rem; accent-color: #4a7ebb; }
+  /* --- phone layout: stack the domains table into tappable rows --- */
+  @media (max-width: 640px) {
+    body { margin: 1rem auto; }
+    #domains, #domains tbody { display: block; }
+    #domains thead { display: none; }
+    #domains tr { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .6rem; padding: .55rem 0; border-bottom: 1px solid rgba(128,128,128,.25); }
+    #domains td { padding: 0; border-bottom: 0; }
+    #domains td:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+    #domains td:nth-child(2) code { overflow-wrap: anywhere; }
+    #domains td:nth-child(3) { margin-left: auto; display: flex; gap: .3rem; align-items: center; }
+    .rm { min-width: 2.1rem; min-height: 2.1rem; }
+  }
 </style>
 </head>
 <body>
@@ -73,10 +86,10 @@ YunoHost portal, ACME and this page are never challenged.</p>
           {% if d.is_app_domain %}
             <input type="checkbox" disabled title="Cannot protect the domain hosting the Anubis GUI itself">
           {% else %}
-            <input type="checkbox" class="dom" value="{{ d.domain }}" {{ 'checked' if d.protected }}>
+            <input type="checkbox" class="dom" id="dom-{{ loop.index }}" value="{{ d.domain }}" {{ 'checked' if d.protected }}>
           {% endif %}
         </td>
-        <td><code>{{ d.domain }}</code>{% if d.is_app_domain %} <span class="badge warn">Anubis GUI</span>{% endif %}</td>
+        <td>{% if d.is_app_domain %}<code>{{ d.domain }}</code> <span class="badge warn">Anubis GUI</span>{% else %}<label for="dom-{{ loop.index }}"><code>{{ d.domain }}</code></label>{% endif %}</td>
         <td>
           {% if d.protected %}<span class="badge on">protected</span>
           {% else %}<span class="badge off">open</span>{% endif %}
