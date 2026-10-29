@@ -2,7 +2,7 @@
 
 Anubis est un intermédiaire (middleware) anti-robots qui protège vos sites web par une preuve de travail, sans dépendre d'un service tiers. Les visiteurs légitimes passent automatiquement après un court défi de preuve de travail calculé dans leur navigateur ; les robots sont bloqués.
 
-**Version livrée :** 1.28.1
+**Version livrée :** 1.28.2
 
 ## Caractéristiques
 

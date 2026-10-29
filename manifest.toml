@@ -7,7 +7,7 @@ name = "Anubis"
 description.en = "Proof-of-work bot shield for your domains, with domain-selection GUI"
 description.fr = "Bouclier anti-robot à preuve de travail pour vos domaines, avec interface de sélection"
 
-version = "1.28.1~ynh2"
+version = "1.28.2~ynh1"
 
 maintainers = ["quartztester"]
 
@@ -64,10 +64,10 @@ ram.runtime = "100M"
     [resources.sources]
 
     [resources.sources.main]
-    amd64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.1/anubis-1.28.1-linux-amd64.tar.gz"
-    amd64.sha256 = "adcb3c2fdfd0fb91cbf7e8376dbcc479f654c85dd3795db3e9a06004786bbdc9"
-    arm64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.1/anubis-1.28.1-linux-arm64.tar.gz"
-    arm64.sha256 = "2eed4f6e40de35554aad6a66dfd017cdc76769c7141af3b0627824c910703060"
+    amd64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.2/anubis-1.28.2-linux-amd64.tar.gz"
+    amd64.sha256 = "69fa671d5438e4f54a50128228cf8c901611fea0ef5b25ad33f8514d8d24fe13"
+    arm64.url = "https://github.com/TecharoHQ/anubis/releases/download/v1.28.2/anubis-1.28.2-linux-arm64.tar.gz"
+    arm64.sha256 = "4e56246817a1155fb275972d17dff9bd1a8a4ad2aad5aaa09b6a0b9fc7c812d6"
 
     autoupdate.strategy = "latest_github_release"
     [resources.sources.main.autoupdate.asset]

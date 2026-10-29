@@ -71,7 +71,7 @@ EOF
 	visudo -cf "$SUDOERS_FILE" || ynh_die "Invalid sudoers syntax"
 fi
 
-yunohost service add "$app" --description="Anubis bot shield (auth_request)" --log="/var/log/syslog"
+yunohost service add "$app" --description="Anubis bot shield (proof-of-work challenge)" --log="/var/log/syslog"
 yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
 
 #=================================================

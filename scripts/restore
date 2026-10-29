@@ -33,7 +33,7 @@ chmod 0755 "$APPLY_BIN"
 ynh_restore "$SUDOERS_FILE"
 chmod 0440 "$SUDOERS_FILE"
 
-yunohost service add "$app" --description="Anubis bot shield (auth_request)" --log="/var/log/syslog"
+yunohost service add "$app" --description="Anubis bot shield (proof-of-work challenge)" --log="/var/log/syslog"
 yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
 
 # Per-domain protection fragments depend on the current domain list; rather
