@@ -21,7 +21,6 @@ ynh_backup "/etc/systemd/system/$app-webui.service"
 ynh_backup "$APPLY_BIN"
 ynh_backup "$SUDOERS_FILE"
 
-# All per-domain protection fragments (paths depend on current settings)
 for f in /etc/nginx/conf.d/*.d/zz-anubis.conf; do
 	[[ -e "$f" ]] && ynh_backup "$f"
 done

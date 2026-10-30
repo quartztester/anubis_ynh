@@ -11,15 +11,12 @@ source /usr/share/yunohost/helpers
 # PRECHECKS
 #=================================================
 
-# multi_instance=false self-guard (YNH 12.1 does not refuse a second copy):
-# a second instance would double-manage nginx fragments and collide on the
-# fixed loopback ports.
+# YNH 12.1 does not refuse a 2nd copy; it would double-manage nginx fragments and collide on the fixed loopback ports.
 if [[ "$app" != "anubis" && -d /etc/yunohost/apps/anubis ]]; then
 	ynh_die "Anubis supports a single instance (already installed as 'anubis')."
 fi
 
-# The GUI is excluded from its own gate by host+prefix; a subpath install
-# would complicate that, so pin it to the root of the chosen domain.
+# GUI is excluded from its own gate by host+prefix, so the install is pinned to the domain root.
 if [[ "${path:-/}" != "/" ]]; then
 	ynh_die "The Anubis GUI must be installed at the root of a domain (path=/)."
 fi
@@ -29,12 +26,10 @@ fi
 #=================================================
 ynh_script_progression "Initializing settings..."
 
-# Persistent JWT signing key for Anubis (single source of truth: app settings;
-# never regenerated on upgrade/restore or issued challenge cookies break).
+# JWT key lives in app settings; never regenerate it or issued challenge cookies break.
 ynh_app_setting_set_default --app="$app" --key=hs512_secret --value="$(ynh_string_random --length=64)"
 
-# Normalise the initial domain list (validated against `yunohost domain list`
-# inside the apply helper).
+# Validated against `yunohost domain list` inside the apply helper.
 ynh_app_setting_set_default --app="$app" --key=protected_domains --value=""
 
 #=================================================
@@ -48,19 +43,16 @@ chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
 chown -R root:root "$install_dir"
 chmod 0755 "$install_dir/bin/anubis"
 
-# Flask admin GUI lives beside the binary
 mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
 install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
-# non-catalog app: pin the tile logo for the portal (permission update
-# stores it by sha256 and serves it from /yunohost/sso/applogos/).
+# Non-catalog app: permission update stores the tile logo by sha256, served from /yunohost/sso/applogos/.
 mkdir -p "/usr/share/yunohost/applogos"
 cp "$YNH_APP_BASEDIR/logos/anubis.png" "/usr/share/yunohost/applogos/anubis.png"
 yunohost user permission update "$app.main" --logo "$YNH_APP_BASEDIR/logos/anubis.png" || true
 
-# Templates used by the root helper at runtime (registry copy is primary;
-# these are backed up with the app).
+# Runtime copy for the root helper; the registry copy under conf/ is primary, this one is backed up with the app.
 install -m 0644 "$YNH_APP_BASEDIR/conf/domain-fragment.conf" "$install_dir/domain-fragment.conf"
 install -m 0644 "$YNH_APP_BASEDIR/conf/gate.lua" "$install_dir/gate.lua"
 install -m 0644 "$YNH_APP_BASEDIR/conf/policy.yaml" "$install_dir/policy.yaml"
@@ -90,10 +82,8 @@ visudo -cf "$SUDOERS_FILE" || ynh_die "Invalid sudoers syntax"
 #=================================================
 ynh_script_progression "Adding system configurations related to $app..."
 
-# Webui nginx vhost fragment (SSO-gated location)
 ynh_config_add_nginx
 
-# Systemd units
 ynh_config_add_systemd --service="$app" --template="systemd.service"
 ynh_config_add_systemd --service="$app-webui" --template="systemd-webui.service"
 

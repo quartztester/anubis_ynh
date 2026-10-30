@@ -11,8 +11,7 @@ source /usr/share/yunohost/helpers
 # CUSTOM APPLY
 #=================================================
 
-# difficulty is stored in settings only; re-render anubis.env + fragments so
-# the running config picks it up. Core restarts the panel's services after.
+# difficulty is settings-only: re-render anubis.env + fragments (core restarts the services afterwards).
 ynh_app_config_apply() {
 	_ynh_app_config_apply
 	ANUBIS_APP="$app" "$APPLY_BIN" render || ynh_die "Failed to re-apply anubis configuration"

@@ -15,9 +15,7 @@ ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
 chown -R root:root "$install_dir"
-# ynh_restore replays tightened 0750 modes, which locks the unprivileged
-# app user out of its own WorkingDirectory (units die status=200/CHDIR);
-# re-apply the install-time readability bits.
+# ynh_restore replays tightened 0750 modes, locking the app user out of its WorkingDirectory (units die status=200/CHDIR); re-apply install-time bits.
 chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
 chmod 0755 "$install_dir/bin/anubis"
 
@@ -40,9 +38,6 @@ chmod 0440 "$SUDOERS_FILE"
 yunohost service add "$app" --description="Anubis bot shield (proof-of-work challenge)" --log="/var/log/syslog"
 yunohost service add "$app-webui" --description="Anubis domain-protection GUI" --log="/var/log/syslog"
 
-# Per-domain protection fragments depend on the current domain list; rather
-# than replaying each archived fragment, regenerate them all from the
-# restored app settings (protected_domains came back with the archive).
 ynh_print_info "Per-domain fragments are regenerated from restored settings..."
 
 #=================================================

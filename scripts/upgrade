@@ -29,17 +29,15 @@ ynh_app_setting_set_default --app="$app" --key=difficulty --value="4"
 #=================================================
 ynh_script_progression "Upgrading source files..."
 
-# Keep the settings-bearing files across the new download
 ynh_setup_source --dest_dir="$install_dir" --keep="anubis.env gate.lua webui domain-fragment.conf"
 
 chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
 chown -R root:root "$install_dir"
 chmod 0755 "$install_dir/bin/anubis"
 
-# Refresh webui + templates + helper from the (possibly newer) package
 mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
 install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
-# refresh the portal tile logo too (non-catalog apps get no automatic one)
+# Non-catalog apps get no automatic portal tile logo; pin it explicitly.
 yunohost user permission update "$app.main" --logo "$YNH_APP_BASEDIR/logos/anubis.png" || true
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
