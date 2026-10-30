@@ -22,6 +22,9 @@ fund = "https://www.patreon.com/cadey"
 yunohost = ">= 12.1.17"
 helpers_version = "2.1"
 architectures = ["amd64", "arm64"]
+# single instance: the package manages machine-global resources (per-domain
+# nginx fragments, one shared client-IP map) and fixed loopback ports;
+# a second instance would double-manage nginx and collide on 8923/8924/9090
 multi_instance = false
 
 ldap = "not_relevant"

@@ -11,6 +11,13 @@ source /usr/share/yunohost/helpers
 # PRECHECKS
 #=================================================
 
+# multi_instance=false self-guard (YNH 12.1 does not refuse a second copy):
+# a second instance would double-manage nginx fragments and collide on the
+# fixed loopback ports.
+if [[ "$app" != "anubis" && -d /etc/yunohost/apps/anubis ]]; then
+	ynh_die "Anubis supports a single instance (already installed as 'anubis')."
+fi
+
 # The GUI is excluded from its own gate by host+prefix; a subpath install
 # would complicate that, so pin it to the root of the chosen domain.
 if [[ "${path:-/}" != "/" ]]; then

@@ -4,19 +4,23 @@ version = "1.0"
 
 [main]
 name.en = "Anubis configuration"
+name.fr = "Configuration d'Anubis"
 services = ["__APP__"]
 
     [main.protection]
     name.en = "Bot shield"
+    name.fr = "Bouclier anti-robots"
 
         [main.protection.difficulty]
         ask.en = "Challenge difficulty (0-8, higher = harder for bots, slower for humans)"
+        ask.fr = "Difficulté du défi (0-8, plus haut = plus dur pour les robots, plus lent pour les humains)"
         type = "number"
         optional = true
         bind = "settings"
 
         [main.protection.note_domains]
         ask.en = "Which domains are protected is managed from the Anubis web GUI (portal tile)."
+        ask.fr = "Les domaines protégés se gèrent depuis l'interface web d'Anubis (tuile du portail)."
         type = "alert"
         style = "info"
         bind = "null"

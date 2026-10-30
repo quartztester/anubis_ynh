@@ -11,7 +11,7 @@ It shall NOT be edited by hand.
 Proof-of-work bot shield for your domains, with domain-selection GUI
 
 [![🌐 Official app website](https://img.shields.io/badge/Official_app_website-darkgreen?style=for-the-badge)](https://anubis.techaro.lol/)
-![Version: 1.28.2~ynh1](https://img.shields.io/badge/Version-1.28.2~ynh1-rgb(18,138,11)?style=for-the-badge)
+![Version: 1.28.2~ynh1](https://img.shields.io/badge/Version-1.28.2~ynh1-128a0b?style=for-the-badge)
 
 
 ## Screenshots

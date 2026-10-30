@@ -1,5 +1,9 @@
 # Administering Anubis
 
+Single instance only (`multi_instance = false`): the package manages
+machine-global resources (per-domain nginx fragments, a shared client-IP map)
+and fixed loopback ports (8923/8924/9090).
+
 ## Web GUI
 
 Open the Anubis tile in the YunoHost portal (or https://your-domain/ if
