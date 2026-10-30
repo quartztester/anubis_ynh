@@ -32,9 +32,19 @@ yunohost service remove "$app-webui"
 #=================================================
 ynh_script_progression "Removing system configurations..."
 
-ynh_safe_rm "$APPLY_BIN"
+# Shared, machine-global files: a failed/removed second instance must never
+# strip them from a surviving one. Delete only when the last instance dies.
+remaining=no
+for d in /etc/yunohost/apps/anubis /etc/yunohost/apps/anubis__*/; do
+	[ -d "$d" ] || continue
+	[ "$(basename "$d")" = "$app" ] && continue
+	remaining=yes
+done
+if [ "$remaining" = "no" ]; then
+	ynh_safe_rm "$APPLY_BIN"
+	ynh_safe_rm "/etc/nginx/conf.d/anubis-client-ip.conf"
+fi
 ynh_safe_rm "$SUDOERS_FILE"
-ynh_safe_rm "/etc/nginx/conf.d/anubis-client-ip.conf"
 ynh_config_remove_nginx
 
 #=================================================
