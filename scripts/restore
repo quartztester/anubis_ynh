@@ -15,6 +15,10 @@ ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
 chown -R root:root "$install_dir"
+# ynh_restore replays tightened 0750 modes, which locks the unprivileged
+# app user out of its own WorkingDirectory (units die status=200/CHDIR);
+# re-apply the install-time readability bits.
+chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
 chmod 0755 "$install_dir/bin/anubis"
 
 #=================================================
