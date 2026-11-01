@@ -1,4 +1,3 @@
-# Anubis __APP__ admin GUI
 [Unit]
 Description=Anubis domain-protection admin GUI (__APP__)
 After=network.target
@@ -15,16 +14,10 @@ ExecStart=/usr/bin/waitress-serve --listen=127.0.0.1:__PORT_WEBUI__ --call anubi
 Restart=always
 RestartSec=10s
 
-# Sandboxing. IMPORTANT - this service sudo-calls its root helper
-# (/usr/local/bin/anubis-ynh-apply); keep these constraints in sync with
-# that requirement:
-#  * NoNoNewPrivileges + no seccomp-based options. On this systemd, any
-#    seccomp-backed sandbox option (SystemCallFilter, ProtectKernelTunables,
-#    LockPersonality, PrivateDevices, CapabilityBoundingSet ...) implicitly
-#    raises NoNewPrivileges, which breaks sudo - verified empirically.
-#  * No ProtectSystem/ReadOnlyPaths: the helper writes
-#    /etc/nginx/conf.d fragments and /etc/yunohost/apps/<app>/settings.yml.
-# The four mount/namespace options below imply neither and are safe:
+# Sandboxing: this service sudo-calls its root helper (anubis-ynh-apply),
+# which writes /etc/nginx/conf.d fragments and app settings.yml, so no
+# ProtectSystem/ReadOnlyPaths; any seccomp-backed option implicitly raises
+# NoNewPrivileges here (breaks sudo), so the four options below avoid both.
  PrivateTmp=yes
  DevicePolicy=closed
  ProtectProc=invisible
