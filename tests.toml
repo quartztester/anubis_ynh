@@ -4,6 +4,11 @@ test_format = 1.0
 
 [default]
 
+    # GUI is root-only (upstream webui hardcodes absolute redirects; install
+    # script enforces it) — drop the subdir scenario; default_install_path then
+    # routes every other test (upgrades, change_url) through the root install.
+    exclude = ["install.subdir"]
+
     # Upgrade tests: last commit of each previous package version.
 
     test_upgrade_from.53ee020.name = "1.28.1~ynh2"

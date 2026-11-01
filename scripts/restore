@@ -14,10 +14,9 @@ source /usr/share/yunohost/helpers
 ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
-chown -R root:root "$install_dir"
-# ynh_restore replays tightened 0750 modes, locking the app user out of its WorkingDirectory (units die status=200/CHDIR); re-apply install-time bits.
-chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
-chmod 0755 "$install_dir/bin/anubis"
+# ynh_restore replays archived modes; re-assert install-time ownership/perms
+# (units run as $app and die 200/CHDIR without enter on the WorkingDirectory)
+_anubis_perms
 
 #=================================================
 # RESTORE SYSTEM CONFIGURATION

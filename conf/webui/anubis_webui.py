@@ -246,7 +246,10 @@ def create_app():
             return
         user = current_user()
         if not user:
-            # Should not happen: the SSO permission gates the location.
+            # Anonymous GET: serve a landing page (CI force-publishes the
+            # permission to visitors and expects 200; humans need the way in).
+            if request.method == "GET":
+                return render_template("anonymous.html"), 200
             return "Forbidden - reach this page through the YunoHost portal", 403
         if not _admin_check(user):
             return "Forbidden - Anubis configuration is restricted to YunoHost admins", 403

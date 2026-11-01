@@ -39,13 +39,11 @@ ynh_script_progression "Setting up source files..."
 
 ynh_setup_source --dest_dir="$install_dir"
 
-chmod -R "u=rwX,g=rX,o=rX" "$install_dir"
-chown -R root:root "$install_dir"
-chmod 0755 "$install_dir/bin/anubis"
+_anubis_perms
 
 mkdir -p "$install_dir/webui/templates" "$install_dir/webui/static"
 install -m 0644 "$YNH_APP_BASEDIR/conf/webui/anubis_webui.py" "$install_dir/webui/anubis_webui.py"
-install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/index.html" "$install_dir/webui/templates/index.html"
+install -m 0644 "$YNH_APP_BASEDIR/conf/webui/templates/"*.html "$install_dir/webui/templates/"
 install -m 0644 "$YNH_APP_BASEDIR/logos/anubis.png" "$install_dir/webui/static/anubis.png"
 # Non-catalog app: permission update stores the tile logo by sha256, served from /yunohost/sso/applogos/.
 mkdir -p "/usr/share/yunohost/applogos"
