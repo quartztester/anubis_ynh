@@ -1,8 +1,6 @@
 #!/bin/bash
 
-#=================================================
 # COMMON VARIABLES AND CUSTOM HELPERS
-#=================================================
 
 APPLY_BIN="/usr/local/bin/anubis-ynh-apply"
 SUDOERS_FILE="/etc/sudoers.d/$app"

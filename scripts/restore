@@ -1,16 +1,12 @@
 #!/bin/bash
 
-#=================================================
 # IMPORT GENERIC HELPERS
-#=================================================
 
 # Keep this path for calling _common.sh inside the execution's context of backup and restore scripts
 source ../settings/scripts/_common.sh
 source /usr/share/yunohost/helpers
 
-#=================================================
 # RESTORE THE APP MAIN DIR
-#=================================================
 ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
@@ -18,9 +14,7 @@ ynh_restore "$install_dir"
 # (units run as $app and die 200/CHDIR without enter on the WorkingDirectory)
 _anubis_perms
 
-#=================================================
 # RESTORE SYSTEM CONFIGURATION
-#=================================================
 ynh_script_progression "Restoring system configurations..."
 
 ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
@@ -39,9 +33,7 @@ yunohost service add "$app-webui" --description="Anubis domain-protection GUI" -
 
 ynh_print_info "Per-domain fragments are regenerated from restored settings..."
 
-#=================================================
 # RE-APPLY FROM SETTINGS
-#=================================================
 ynh_script_progression "Re-applying nginx fragments from restored settings..."
 
 run_apply render
@@ -51,8 +43,6 @@ ynh_systemctl --service="$app-webui" --action="start"
 
 systemctl reload nginx
 
-#=================================================
 # END OF SCRIPT
-#=================================================
 
 ynh_script_progression "Restore of $app completed"
