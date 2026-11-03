@@ -208,9 +208,7 @@ function flash(cls, text) {
 }
 
 // --- unsaved-changes tracking ---------------------------------------------
-// A dirty flag per save target: domains+difficulty ("Apply"), rules+packs
-// ("Save rules"), raw YAML ("Save YAML"). Any pending change trips the
-// browser's leave-page confirmation and shows the warning banner.
+// dirty flag per save target; pending changes trip the leave-page confirm + banner
 const dirty = { domains: false, rules: false, yaml: false };
 const dirtyNote = document.getElementById('dirty');
 function anyDirty() { return dirty.domains || dirty.rules || dirty.yaml; }
