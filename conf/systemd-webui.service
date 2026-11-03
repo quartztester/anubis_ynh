@@ -14,10 +14,7 @@ ExecStart=/usr/bin/waitress-serve --listen=127.0.0.1:__PORT_WEBUI__ --call anubi
 Restart=always
 RestartSec=10s
 
-# Sandboxing: this service sudo-calls its root helper (anubis-ynh-apply),
-# which writes /etc/nginx/conf.d fragments and app settings.yml, so no
-# ProtectSystem/ReadOnlyPaths; any seccomp-backed option implicitly raises
-# NoNewPrivileges here (breaks sudo), so the four options below avoid both.
+# sudo-calls the root helper; seccomp-backed hardening breaks sudo, keep these four only.
  PrivateTmp=yes
  DevicePolicy=closed
  ProtectProc=invisible
