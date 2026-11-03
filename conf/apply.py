@@ -156,9 +156,7 @@ def render_env(s, uid):
 
 
 def apply(protected, s):
-    # The GUI host must never be protected, or admins could lock themselves
-    # out of the panel (the gate only exempts the GUI *location*, and at
-    # path=/ that is the whole site).
+    # shortcut: never protect the GUI host itself, admins would lock themselves out
     if s["domain"] in protected:
         fail(f"'{s['domain']}' hosts the Anubis GUI itself and cannot be protected")
     uid = pwd.getpwnam(app).pw_uid
@@ -226,9 +224,7 @@ def status(s):
 # ---------------------------------------------------------------- policy
 
 
-# Key lists transcribed from upstream lib/config/config.go (BotConfig,
-# fileConfig, ChallengeRules, Weight, Threshold) so the GUI rejects what
-# anubis rejects and accepts what anubis accepts.
+# key lists transcribed from upstream config.go so the GUI validates like anubis
 POLICY_KEYS = ("status_codes", "bots", "import", "metrics", "impressum",
                "store", "logging", "honeypot", "thresholds", "geoip",
                "openGraph", "dnsbl", "dns_ttl")
@@ -408,9 +404,7 @@ def _install_policy(text, s):
     r = run(["systemctl", "restart", app])
     if r.returncode != 0:
         fail(f"anubis failed to restart: {r.stderr.strip()[-300:]}")
-    # confirm it actually came up and answers checks. Any HTTP response
-    # (401 challenge / 403 deny / 502 no-target) proves it is serving;
-    # curl -sf would false-fail on those.
+    # any HTTP response (401/403/502) proves serving; curl -sf false-fails on those
     import time
     for _ in range(20):
         chk = run(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
@@ -431,9 +425,7 @@ def policy_set(s):
 
 
 def policy_reset(s):
-    # The pristine package default lives in the app registry
-    # (/etc/yunohost/apps/<app>/conf/policy.yaml) and is refreshed by every
-    # upgrade, so "default" always means "what this package ships".
+    # pristine package default in the app registry, refreshed by every upgrade
     default = load_template("policy.yaml")
     if not default:
         fail("package default policy not found in the app registry")

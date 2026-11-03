@@ -83,9 +83,7 @@ def run_apply_stdin(mode, payload):
 
 
 def _admin_check(user):
-    # Belt and braces: re-check YunoHost admins membership server-side
-    # when possible (the yunohost CLI needs root, so this is best-effort -
-    # the SSO permission remains the real gate).
+    # best-effort server-side admin recheck; the SSO permission is the real gate
     r = subprocess.run(
         ["yunohost", "user", "group", "list", "--output", "json"],
         capture_output=True, text=True, timeout=30)
@@ -101,9 +99,7 @@ def _admin_check(user):
 
 
 # ------------------------------------------------------------- structured view
-# The friendly editor shows bot rules; all other top-level policy keys are
-# preserved verbatim when saving from it, and remain editable in the
-# collapsed "advanced" YAML editor on the same page.
+# friendly editor edits bot rules; other top-level keys preserved verbatim (advanced YAML editor)
 
 def _pack_label(imp):
     p = next((p for p in RULE_PACKS if p["value"] == imp), None)
@@ -232,10 +228,7 @@ def create_app():
     app = Flask(__name__)
 
     def current_user():
-        # Only present when ssowat has authenticated + authorized the
-        # visitor for this app's permission. Read the raw WSGI environ key:
-        # WSGI servers normalize the header name differently (waitress turns
-        # YNH_USER into 'Ynh-User'), but HTTP_YNH_USER is deterministic.
+        # set only when ssowat authorized; HTTP_YNH_USER is the deterministic WSGI key
         return request.environ.get("HTTP_YNH_USER")
 
     @app.before_request
