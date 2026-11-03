@@ -1,10 +1,5 @@
--- Anubis YunoHost gate (rewrite phase, i.e. BEFORE ssowat's access phase).
--- Referenced by /etc/nginx/conf.d/<domain>.d/zz-anubis.conf for each protected
--- domain. Managed file - do not edit by hand.
---
--- Calls Anubis' /api/check over a Lua cosocket rather than
--- ngx.location.capture, because capture rejects HTTP/2 requests ("http2
--- requests not supported yet") and YunoHost vhosts speak HTTP/2.
+-- Anubis gate, rewrite phase (runs BEFORE ssowat's access phase); managed file.
+-- cosocket not ngx.location.capture: capture rejects HTTP/2, which YunoHost vhosts speak.
 
 local uri = ngx.var.uri
 local host = ngx.var.host
@@ -14,9 +9,7 @@ if uri:find("^/%.well%-known/") or uri:find("^/yunohost/") then
     return
 end
 
--- If the GUI ever ends up on a subpath, keep it reachable so admins can
--- always toggle protection back off. (At path=/ the GUI host can never be a
--- protected domain; apply.py enforces that.)
+-- keep the GUI reachable so admins can toggle protection back off (path=/ hosts can't be protected anyway)
 local guard_host = "__GUARD_DOMAIN__"
 local guard_prefix = "__GUARD_PREFIX__"
 if guard_prefix ~= "" and host == guard_host and
